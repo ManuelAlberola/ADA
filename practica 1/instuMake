@@ -1,0 +1,39 @@
+OPTS = -Wall -O3 -std=c++0x
+
+bubbleSort: bubbleSort.cc   //Compara la fecha y hora de ambos ficheros y mira la más reciente.
+	g++ ${OPTS} -o bubbleSort bubbleSort.cc	 //Si es más reciente recompila
+
+bubbleSort.CPUtimes: bubbleSort
+	./bubbleSort > bubbleSort.CPUtimes
+
+graphs: bubbleSort.CPUtimes bubbleSort.gnuplot
+	gnuplot bubbleSort.gnuplot
+
+all: bubbleSort bubbleSort.CPUtimes graphs
+
+
+//Cuando escribes make en el terminal sólo se hace el primer objetivo.
+//Este puede desencadenar los siguientes objetivos.
+
+//Para redirigir la salida del ejecutable: ./ejecutable > nombrefichero    es decir: ./bubbleSort > file
+//Para redirigir la salida de error: ./ejecutable 2> nombrefichero    es decir: ./bubbleSort 2> fileErrors
+
+
+//Para ejecutar el segundo objetivo: make bubbleSort.CPUtimes
+//El segundo objetivo comprueba si la tabla que está hecha es más reciente que el ejecutable. Si no, la vuelve generar
+
+//Para ejecutar el tercer objetivo: make graphs
+//Llama a gnuplot y genera las gráficas.
+
+//Para lanzar el cuarto objetivo: make all
+//Lo hace todo. No recibe nombre de ficheros. Puede recibir también nombre de objetivos.
+
+//Si pongo el make all al principio, solo con escribir make ya haría todo.
+
+//-Wall 				->Muestra todos los warnings
+//-O3 					->Optimizador de código del Optimizador
+//-std=c++0x		->Estandar del lenguaje.
+
+
+//Para comprimir tar cvfz 74017527P.tar.gz *
+//Para descomprimir tar xvfz 74017527P.tar.gz 
