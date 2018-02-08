@@ -24,15 +24,15 @@ set title "quick Sort: Exact time complexity and Fit function"
 #Uncomment the function to be tested and comment the rest:
 
 ##Fit to a linear function:
-y(x)=a*x + b
-fitFunction="Fitting quicksort time values to f(n) = n+k"
-fit y(x) "quickSort.CPUtimes" using 1:2 via a,b
+#y(x)=a*x + b
+#fitFunction="Fitting quicksort time values to f(n) = n+k"
+#fit y(x) "quickSort.CPUtimes" using 1:2 via a,b
 
 
 ##Fit to a (n log n + k) function:
-#y(x)=a*x*log(x) + b
-#fitFunction="Fitting quicksort time values to f(n) = n log(n)+k"
-#fit y(x) "quickSort.CPUtimes" using 1:2 via a,b
+y(x)=a*x*log(x) + b
+fitFunction="Fitting quicksort time values to f(n) = n log(n)+k"
+fit y(x) "quickSort.CPUtimes" using 1:2 via a,b
 
 
 ##Fit to a cuadratic function:

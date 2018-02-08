@@ -1,3 +1,4 @@
+##Manuel Alberola Torres 74017527P
 set terminal png
 set output "bubbleSort.png"
 
