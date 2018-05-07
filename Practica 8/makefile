@@ -3,5 +3,5 @@ OPTS = -std=c++0x
 
 all: mca_greedy
 
-mca_greedy: mca_greedy.cc
-	g++ ${OPTS} -o mca mca_greedy.cc
+mca_greedy: mca_bt.cc
+	g++ ${OPTS} -o mca mca_bt.cc

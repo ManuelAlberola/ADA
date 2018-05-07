@@ -5,6 +5,9 @@
 #include <math.h>
 #include <vector>
 #include <algorithm>    // std::sort
+
+
+
 using namespace std;
 
 //Declaración de tipos de datos
@@ -17,49 +20,110 @@ void printVectors();
 bool orderDesc (int i,int j) { return (i>j); } //Ordena de mayor a menor
 bool orderIndex (int i,int j);
 double greedy();
+void getPermutations (unsigned int k, vector<int>&x);
+void setSolution(vector<int>&x);
 
 //Declaración de variables globales
 int n = 0; //ciudades
 int g = 0; //gasolineras
+double BEST = 9999;
+int asigned = 0;
+int recursivecalls = 1;
 vector<int> V; //Numero de coches por ciudad
 vector<int> V_aux; //Numero de coches por ciudad ordenados de mayor a menor
 vector<int> Index; //Indices del vector original
 vector<int> S; //Solution
+vector<int> salida;
 vector<int> T; //Ciudades sin gasolinera
 Matrix matrix;
+vector<int> Bt; //Backtraking
 
+/**
+PSEUDOCODIGO
+1º Mostrar todas las combinaciones de gasolineras en Ciudades
+2º Por cada combinación comparo el coste asociado con el obtenido
+3º Mejorar con cotas optimistas
+4º Mejorar con cotas pesimistas
+**/
 
 
 
 int main(int argc, char *argv[]){
+
     if (arguments (argc, argv) ){
       V_aux = V;
+      vector<int> bt_aux (n, 0);
+      Bt = bt_aux;
 
-      std::sort(V_aux.begin(), V_aux.end(), orderDesc);
-      std::sort(Index.begin(), Index.end(), orderIndex);
 
-      for (int i=g-1; i>=0; i--){
-        S.push_back(Index[i]);
-      }
+      getPermutations(0, Bt);
 
-      for (int i = S.size(); i<n; i++){
-        T.push_back(Index[i]);
-      }
+      cout<<"Backtracking: " <<BEST <<endl;
 
-      //Print solution
       cout<<"Emplacements: ";
-      for(unsigned int i=0; i<S.size(); i++){
-        cout<<S[i] <<" ";
+      for(unsigned int i=0; i<salida.size(); i++){
+        cout<<salida[i] <<" ";
       }
-      cout<<endl <<"Greedy: " << greedy() <<endl;
+      cout <<endl;
 
-      //printVectors();
+
+      cout <<"CPU time (ms):" <<endl;
+      cout<<"Recursive calls: " <<recursivecalls <<endl;
+
     }
     return 0;
 }
 
-bool orderIndex (int i,int j) { return (V[i]>V[j]); } //Ordena de mayor a menor los índices
 
+void getPermutations (unsigned int k, vector<int>&x){
+
+  if(x.size() == k && asigned <= g){
+     setSolution(x);
+     double actual = greedy();
+     //cout<<"Solution =" <<actual <<endl;
+     if (actual < BEST && actual > 0 && S.size() <= g){
+       BEST = actual;
+       salida = S;
+     }
+     asigned = 0;
+     actual = 0;
+     //recursivecalls  = 0;
+     return;
+   }
+   x[k] = 1;
+   getPermutations(k+1, x);
+   asigned = asigned + 1;
+
+   x[k] = 0;
+   getPermutations(k+1, x);
+   recursivecalls = recursivecalls + 1;
+}
+
+void setSolution(vector<int>&x){
+  S.clear();
+  T.clear();
+
+  for(int i=0; i<x.size(); i++){
+      if(x[i] == 1){
+        S.push_back(i);
+      }else{
+        T.push_back(i);
+      }
+  }
+  /*
+  cout<<"S: ";
+  for (int i = 0; i< S.size(); i++){
+    cout<<S[i];
+  }
+  cout<<endl;
+
+  cout<<"T: ";
+  for (int i = 0; i< T.size(); i++){
+    cout<<T[i];
+  }
+  cout<<endl;
+  */
+}
 
 double greedy (){
   double result = 0;
