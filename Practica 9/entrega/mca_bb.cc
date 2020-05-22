@@ -4,31 +4,52 @@
 #include <fstream>
 #include <math.h>
 #include <vector>
-#include <algorithm>    // std::sort
-
-
+#include <algorithm>      // std::sort
+#include <queue>          // std::priority_queue
+#include <chrono>
 
 using namespace std;
+using namespace chrono;
 
 //Declaración de tipos de datos
 typedef vector< vector<double> >Matrix;
+
+struct Node {
+ vector<int> emplacements;
+ unsigned k;
+ unsigned g; //Gasolineras asignadas
+ double value;
+ double optimistic;
+};
+
+struct is_worse {
+  bool operator() (const Node& a, const Node& b) {
+    return a.g < b.g;
+  }
+};
+
+priority_queue<Node, vector<Node>, is_worse > NodosVivos;
+
 
 //Declaración de funciones
 bool readFile(string fileName);
 bool arguments (int argc, char *argv[]);
 void printVectors();
-bool orderDesc (int i,int j) { return (i>j); } //Ordena de mayor a menor
-bool orderIndex (int i,int j);
 double greedy();
-void getPermutations (unsigned int k, vector<int>&x);
 void setSolution(vector<int>&x);
+void BranchAndBound();
+bool feasible(Node nodo);
+bool possible(Node nodo);
+double optimistic (Node nodo);
+bool orderDesc (int i,int j) { return (i>j); } //Ordena de mayor a menor
+
 
 //Declaración de variables globales
 int n = 0; //ciudades
 int g = 0; //gasolineras
-double BEST = 9999;
-int asigned = 0;
-int recursivecalls = 1;
+double BEST = 999999999;
+int Iterations = 1;
+int nodos = 0;
 vector<int> V; //Numero de coches por ciudad
 vector<int> V_aux; //Numero de coches por ciudad ordenados de mayor a menor
 vector<int> Index; //Indices del vector original
@@ -36,92 +57,161 @@ vector<int> S; //Solution
 vector<int> salida;
 vector<int> T; //Ciudades sin gasolinera
 Matrix matrix;
-vector<int> Bt; //Backtraking
+vector<int> Emplacements; //Ciudades sin gasolinera
 
-/**
-PSEUDOCODIGO
-1º Mostrar todas las combinaciones de gasolineras en Ciudades
-2º Por cada combinación comparo el coste asociado con el obtenido
-3º Mejorar con cotas optimistas
-4º Mejorar con cotas pesimistas
-**/
-
+bool orderIndex (int i,int j) { return (V[i]>V[j]); } //Ordena de mayor a menor los índices
 
 
 int main(int argc, char *argv[]){
-
     if (arguments (argc, argv) ){
+
       V_aux = V;
-      vector<int> bt_aux (n, 0);
-      Bt = bt_aux;
 
+      std::sort(V_aux.begin(), V_aux.end(), orderDesc);
+      std::sort(Index.begin(), Index.end(), orderIndex);
 
-      getPermutations(0, Bt);
-
-      cout<<"Backtracking: " <<BEST <<endl;
-
-      cout<<"Emplacements: ";
-      for(unsigned int i=0; i<salida.size(); i++){
-        cout<<salida[i] <<" ";
+      for (int i=g-1; i>=0; i--){
+        S.push_back(Index[i]);
       }
-      cout <<endl;
 
+      for (int i = S.size(); i<n; i++){
+        T.push_back(Index[i]);
+      }
 
-      cout <<"CPU time (ms):" <<endl;
-      cout<<"Recursive calls: " <<recursivecalls <<endl;
+      BEST = greedy();
 
+      //First node
+      Node node;
+      node.k=0;
+      node.g=0;
+      node.value=0;
+      node.optimistic=999999999;
+      node.emplacements = vector<int> (n, 0);
+      //Add first node
+      NodosVivos.push(node);
+      nodos++;
+      auto begin = high_resolution_clock::now();
+
+      //Start algorithm
+      BranchAndBound();
+
+      auto end = high_resolution_clock::now();
+      double totalTime = duration_cast<milliseconds>(end-begin).count();
+      cout<<"Bb: " <<BEST <<endl;
+      cout<<"Emplacements: ";
+      for(int i = 0; i<Emplacements.size(); i++){
+        if(Emplacements[i] == 1){
+          cout<<i <<" ";
+        }
+      }
+
+      cout<<endl <<"CPU time (ms): " <<totalTime <<endl;
+      cout<<"Iterations of loop while: " <<Iterations <<endl;
     }
     return 0;
 }
 
 
-void getPermutations (unsigned int k, vector<int>&x){
+void BranchAndBound(){
+  Node expandir;
 
-  if(x.size() == k && asigned <= g){
-     setSolution(x);
-     double actual = greedy();
-     if (actual < BEST && actual > 0 && S.size() <= g){
-       BEST = actual;
-       salida = S;
-     }
-     asigned = 0;
-     actual = 0;
-     return;
-   }
-   x[k] = 1;
-   getPermutations(k+1, x);
-   asigned = asigned + 1;
+  while(!NodosVivos.empty()){
+    do{
+      Iterations ++;
+      expandir = NodosVivos.top(); //Asign first node
+      NodosVivos.pop(); //Extract first node
+    }while (expandir.value>= BEST && !NodosVivos.empty());
 
-   x[k] = 0;
-   getPermutations(k+1, x);
+    if(expandir.k < n){
+      //Expand tree
+      Node hijo1 = expandir;
+      Node hijo2 = expandir;
 
-   recursivecalls++;
+      //hijo1.emplacements[expandir.k] = 0;
+      hijo2.emplacements[expandir.k] = 1;
+
+      hijo1.k = expandir.k + 1;
+      hijo2.k = expandir.k + 1;
+
+      //hijo1.g = expandir.g + 0;
+      hijo2.g = expandir.g + 1;
+
+      if(possible(hijo1)){
+        hijo1.optimistic = optimistic(hijo1);
+
+        if(hijo1.k == n && hijo1.g == g){ //nodo hoja && todas las gasolineras posibles asignadas
+            setSolution(hijo1.emplacements);
+            hijo1.value = greedy();
+            if(hijo1.value <= BEST){
+              BEST = hijo1.value;
+              Emplacements = hijo1.emplacements;
+            }
+        }
+        if(hijo1.optimistic < BEST){
+          NodosVivos.push(hijo1);
+        }
+      }
+
+      if(possible(hijo2)){
+        hijo2.optimistic = optimistic(hijo2);
+
+        if(hijo2.k == n && hijo2.g == g){ //nodo hoja && todas las gasolineras posibles asignadas
+            setSolution(hijo2.emplacements);
+            hijo2.value = greedy();
+            if(hijo2.value <= BEST){
+              BEST = hijo2.value;
+              Emplacements = hijo2.emplacements;
+            }
+        }
+        if(hijo2.optimistic < BEST){
+          NodosVivos.push(hijo2);
+        }
+      }
+    }
+  }
 }
+
+bool feasible(Node nodo){
+  if(nodo.g <= g){
+    return true;
+  }else{
+    return false;
+  }
+}
+
+/*
+* Cota optimista empleada para poda
+* Devuelve el mejor valor que se puede conseguir. Puede ser imposible.
+* Si el mejor valor que se puede conseguir es peor que el mejor que
+* tenemos hasta el momento se poda el nodo.
+*/
+double optimistic(Node nodo){
+
+  for(int i = nodo.k; i< nodo.emplacements.size(); i++){
+    nodo.emplacements[i] = 1;
+  }
+
+  setSolution(nodo.emplacements);
+  nodo.optimistic = greedy();
+  return nodo.optimistic;
+}
+
+/*
+*Check if the combination is possible
+*/
+bool possible(Node nodo){ if (nodo.g > g){ return false; }else{ return true; }}
 
 void setSolution(vector<int>&x){
   S.clear();
   T.clear();
 
   for(int i=0; i<x.size(); i++){
-      if(x[i] == 1){
-        S.push_back(i);
-      }else{
-        T.push_back(i);
-      }
+    if(x[i] == 1){
+      S.push_back(i);
+    }else{
+      T.push_back(i);
+    }
   }
-  /*
-  cout<<"S: ";
-  for (int i = 0; i< S.size(); i++){
-    cout<<S[i];
-  }
-  cout<<endl;
-
-  cout<<"T: ";
-  for (int i = 0; i< T.size(); i++){
-    cout<<T[i];
-  }
-  cout<<endl;
-  */
 }
 
 double greedy (){
@@ -212,6 +302,7 @@ bool readFile(string fileName){
 
 /**
 * Imprime el contenido de los vectores
+* Empleada para pruebas
 **/
 void printVectors(){
     cout<<"Vector V: ";
